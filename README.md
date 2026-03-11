@@ -10,5 +10,5 @@ I thought that it would be interesting to see what the digits of π look like if
 
 ## Options
 
-View the page at: [pi-cumulative-graph.pages.dev](https://pi-cumulative-graph.pages.dev)  
-View the source in: [index.html](index.html)
+* View the page at: [pi-cumulative-graph.pages.dev](https://pi-cumulative-graph.pages.dev)  
+* View the source in: [index.html](index.html)
