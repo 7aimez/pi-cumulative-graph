@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Pi Cumulative Difference Chart - Pi Day 38</title>
+	<script src="https://d3js.org/d3.v7.min.js"></script>
+	<style>
+		:root {
+			color-scheme: light dark;
+			font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+		}
+
+		body {
+			margin: 0;
+			padding: 24px;
+			background: #0b1020;
+			color: #e6edf3;
+		}
+
+		h1 {
+			margin: 0 0 8px;
+			font-size: 1.3rem;
+		}
+
+		p {
+			margin: 0 0 14px;
+			color: #b8c2cc;
+			max-width: 900px;
+			line-height: 1.5;
+		}
+
+		#chart {
+			width: min(1100px, 100%);
+			border: 1px solid #2d3748;
+			border-radius: 10px;
+			background: #111827;
+			overflow: hidden;
+		}
+
+		.controls {
+			display: flex;
+			gap: 10px;
+			align-items: center;
+			margin: 0 0 14px;
+			flex-wrap: wrap;
+		}
+
+		.controls label {
+			color: #cbd5e0;
+		}
+
+		.controls input {
+			width: 120px;
+			padding: 6px 8px;
+			border-radius: 6px;
+			border: 1px solid #4a5568;
+			background: #0f172a;
+			color: #e6edf3;
+		}
+
+		.controls button {
+			padding: 6px 10px;
+			border-radius: 6px;
+			border: 1px solid #4a5568;
+			background: #1e293b;
+			color: #e6edf3;
+			cursor: pointer;
+		}
+
+		.controls button:hover {
+			background: #334155;
+		}
+
+		.axis path,
+		.axis line {
+			stroke: #4a5568;
+		}
+
+		.axis text {
+			fill: #cbd5e0;
+			font-size: 12px;
+		}
+
+		.grid line {
+			stroke: #253043;
+			stroke-opacity: 0.8;
+		}
+
+		.grid path {
+			stroke-width: 0;
+		}
+
+		.baseline {
+			stroke: #94a3b8;
+			stroke-dasharray: 4 4;
+		}
+
+		.line {
+			fill: none;
+			stroke: #e2e8f0;
+			stroke-width: 1.6;
+		}
+
+		.crosshair {
+			stroke: #f8fafc;
+			stroke-width: 1;
+			stroke-dasharray: 3 3;
+		}
+
+		.tooltip-box {
+			fill: #020617;
+			stroke: #64748b;
+			rx: 5;
+		}
+
+		.tooltip-text {
+			fill: #f8fafc;
+			font-size: 12px;
+		}
+
+		.presets-container {
+			display: flex;
+			gap: 16px;
+		}
+
+		.presets {
+			background: #111827;
+			border: 1px solid #2d3748;
+			border-radius: 10px;
+			padding: 16px;
+			width: 160px;
+			flex-shrink: 0;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.presets h3 {
+			margin: 0 0 8px;
+			font-size: 0.95rem;
+			color: #e6edf3;
+		}
+
+		.preset-button {
+			padding: 8px 10px;
+			border-radius: 6px;
+			border: 1px solid #4a5568;
+			background: #1e293b;
+			color: #e6edf3;
+			cursor: pointer;
+			text-align: left;
+			font-size: 13px;
+			white-space: normal;
+		}
+
+		.preset-button:hover {
+			background: #334155;
+		}
+
+		.corner-controls {
+			position: fixed;
+			top: 14px;
+			right: 14px;
+			z-index: 1000;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.github-corner {
+			position: static;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 42px;
+			height: 42px;
+			border-radius: 999px;
+			border: 1px solid #4a5568;
+			background: #111827;
+			color: #e6edf3;
+			text-decoration: none;
+		}
+
+		.github-corner:hover {
+			background: #1f2937;
+		}
+
+		.github-corner svg {
+			width: 22px;
+			height: 22px;
+			fill: currentColor;
+		}
+
+		.credits-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 42px;
+			height: 42px;
+			padding: 0;
+			border-radius: 999px;
+			border: 1px solid #4a5568;
+			background: #111827;
+			color: #e6edf3;
+			cursor: pointer;
+		}
+
+		.credits-button:hover {
+			background: #1f2937;
+		}
+
+		.credits-button svg {
+			width: 20px;
+			height: 20px;
+			fill: currentColor;
+		}
+
+		.modal-backdrop {
+			position: fixed;
+			inset: 0;
+			z-index: 1100;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+			background: rgba(2, 6, 23, 0.7);
+		}
+
+		.modal-backdrop.open {
+			display: flex;
+		}
+
+		.modal {
+			width: min(560px, 100%);
+			border: 1px solid #334155;
+			border-radius: 12px;
+			background: #0f172a;
+			padding: 16px;
+		}
+
+		.modal h2 {
+			margin: 0 0 10px;
+			font-size: 1.1rem;
+			color: #e6edf3;
+		}
+
+		.modal p {
+			margin: 0 0 10px;
+			max-width: none;
+		}
+
+		.modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			margin-top: 14px;
+		}
+
+		.modal-close {
+			padding: 6px 10px;
+			border-radius: 6px;
+			border: 1px solid #4a5568;
+			background: #1e293b;
+			color: #e6edf3;
+			cursor: pointer;
+		}
+
+		.modal-close:hover {
+			background: #334155;
+		}
+	</style>
+</head>
+<body>
+	<div class="corner-controls">
+		<a class="github-corner" href="https://github.com/7aimez" target="_blank" rel="noopener noreferrer" aria-label="GitHub profile">
+			<svg viewBox="0 0 16 16" aria-hidden="true">
+				<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.56 7.56 0 0 1 8 3.8c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+			</svg>
+		</a>
+		<button id="creditsBtn" class="credits-button" type="button" aria-label="Credits" title="Credits">
+			<svg viewBox="0 0 24 24" aria-hidden="true">
+				<path d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2zm0 4a1.5 1.5 0 1 1-1.5 1.5A1.5 1.5 0 0 1 12 6zm2 12h-4a1 1 0 0 1 0-2h1v-4h-1a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v5h1a1 1 0 0 1 0 2z" />
+			</svg>
+		</button>
+	</div>
+
+	<div id="creditsModal" class="modal-backdrop" aria-hidden="true">
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
+			<h2 id="creditsTitle">Credits</h2>
+			<p>Created by James Davies for Pi Day 38.</p>
+			<p>Visualization built with D3.js.</p>
+			<p>Pi digits computed in-browser using the arctangent formula method with BigInt precision.</p>
+			<p>This project is licensed under the <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+			<div class="modal-actions">
+				<button id="creditsCloseBtn" class="modal-close" type="button">Close</button>
+			</div>
+		</div>
+	</div>
+	<h1>Pi Cumulative Difference Chart - Pi Day 38</h1>
+	<p>
+		I thought that it would be interesting to see what the digits of π look like if we alternate between adding and subtracting them by their position. Use alternating signs by position: <strong>+3</strong>, then <strong>-1</strong>, <strong>+4</strong>, <strong>-1</strong>, ... (each even index adds, each odd index subtracts). When I created this chart, I expected to see a random sequence around zero, but instead, I was surprised to find these patterns and clusters of positive and negative values. It also showed me that this sequence tended to produce more positive values near the start of the values (up to about index 50K), which is quite unexpected for a number that is often considered to be "random". This chart has made me woonder whether there are any mathematical explanations for these patterns.
+		<br /><br />
+		By James Davies, for Pi Day 38 (March 14, 2024)
+	</p>
+	<hr style="border: none; border-top: 1px solid #2d3748; margin: 24px 0;" />
+	<div class="controls">
+		<label for="digitsInput">Digits of π:</label>
+		<input id="digitsInput" type="number" min="2" max="10000" value="1000" step="1" />
+		<label for="startInput">Start index:</label>
+		<input id="startInput" type="number" min="0" max="50000" value="0" step="1" />
+		<button id="drawBtn" type="button">Draw</button>
+	</div>
+	<div class="presets-container">
+		<div id="chart"></div>
+		<div class="presets">
+			<h3>Presets</h3>
+			<button class="preset-button" data-digits="1000" data-start="0">First 1000</button>
+			<button class="preset-button" data-digits="4" data-start="0">Pi's Birthday (3/14)</button>
+			<button class="preset-button" data-digits="50" data-start="740">Feynman Point</button>
+			<button class="preset-button" data-digits="200" data-start="6442">Palindromes</button>
+			<button class="preset-button" data-digits="10000" data-start="10000">Second negative point</button>
+			<button class="preset-button" data-digits="10000" data-start="35000">More negative points</button>
+		</div>
+	</div>
+
+	<script>
+
+		function computePiDigits(totalDigits) {
+			const guardDigits = 15;
+			const scaleDigits = totalDigits + guardDigits;
+			const scale = 10n ** BigInt(scaleDigits);
+
+			function arctanInverse(invX) {
+				const x = BigInt(invX);
+				const x2 = x * x;
+
+				let term = scale / x;
+				let sum = term;
+				let n = 1n;
+
+				while (term !== 0n) {
+					term = term / x2;
+					if (term === 0n) break;
+
+					const frac = term / (2n * n + 1n);
+					if (frac === 0n) break;
+
+					if (n % 2n === 0n) {
+						sum += frac;
+					} else {
+						sum -= frac;
+					}
+
+					n += 1n;
+				}
+
+				return sum;
+			}
+
+			const piScaled = 16n * arctanInverse(5) - 4n * arctanInverse(239);
+			const piString = piScaled.toString().padStart(scaleDigits + 1, "0");
+			const integerPart = piString.slice(0, -scaleDigits);
+			const fractionalPart = piString.slice(-scaleDigits);
+
+			return (integerPart + fractionalPart).slice(0, totalDigits);
+		}
+
+		function buildSeries(piDigits, startIndex, digitsCount) {
+			const digits = piDigits.split("").map(Number);
+			const series = [];
+			let running = 0;
+
+			for (let i = 0; i < startIndex; i += 1) {
+				const digit = digits[i];
+				const delta = i % 2 === 0 ? digit : -digit;
+				running += delta;
+			}
+
+			const endIndex = Math.min(startIndex + digitsCount, digits.length);
+
+			for (let i = startIndex; i < endIndex; i += 1) {
+				const digit = digits[i];
+				const delta = i % 2 === 0 ? digit : -digit;
+				running += delta;
+				series.push({
+					index: i,
+					digit,
+					delta,
+					value: running,
+				});
+			}
+
+			return series;
+		}
+
+		function drawDifferenceChart(data) {
+			d3.select("#chart").selectAll("*").remove();
+
+			const width = 1100;
+			const height = 560;
+			const margin = { top: 24, right: 24, bottom: 85, left: 80 };
+			const innerWidth = width - margin.left - margin.right;
+			const innerHeight = height - margin.top - margin.bottom;
+			const minIndex = data[0].index;
+			const maxIndex = data[data.length - 1].index;
+
+			const xBase = d3.scaleLinear()
+				.domain(d3.extent(data, d => d.index))
+				.range([0, innerWidth]);
+
+			const yExtent = d3.extent(data, d => d.value);
+			const y = d3.scaleLinear()
+				.domain([
+					Math.min(yExtent[0], 0) - 3,
+					Math.max(yExtent[1], 0) + 3,
+				])
+				.nice()
+				.range([innerHeight, 0]);
+
+			const svg = d3.select("#chart")
+				.append("svg")
+				.attr("viewBox", `0 0 ${width} ${height}`)
+				.attr("width", "100%")
+				.attr("height", "auto");
+
+			const g = svg.append("g")
+				.attr("transform", `translate(${margin.left},${margin.top})`);
+
+			const grid = g.append("g")
+				.attr("class", "grid")
+				.call(d3.axisLeft(y).ticks(8).tickSize(-innerWidth).tickFormat(""));
+
+			const baseline = g.append("line")
+				.attr("class", "baseline")
+				.attr("x1", 0)
+				.attr("x2", innerWidth)
+				.attr("y1", y(0))
+				.attr("y2", y(0));
+
+			const areaPositive = d3.area()
+				.x(d => xBase(d.index))
+				.y0(y(0))
+				.y1(d => y(Math.max(d.value, 0)))
+				.curve(d3.curveMonotoneX);
+
+			const areaNegative = d3.area()
+				.x(d => xBase(d.index))
+				.y0(y(0))
+				.y1(d => y(Math.min(d.value, 0)))
+				.curve(d3.curveMonotoneX);
+
+			const line = d3.line()
+				.x(d => xBase(d.index))
+				.y(d => y(d.value))
+				.curve(d3.curveMonotoneX);
+
+			const positivePath = g.append("path")
+				.datum(data)
+				.attr("d", areaPositive)
+				.attr("fill", "#22c55e")
+				.attr("fill-opacity", 0.35);
+
+			const negativePath = g.append("path")
+				.datum(data)
+				.attr("d", areaNegative)
+				.attr("fill", "#ef4444")
+				.attr("fill-opacity", 0.35);
+
+			const linePath = g.append("path")
+				.datum(data)
+				.attr("class", "line")
+				.attr("d", line);
+
+			const xAxis = g.append("g")
+				.attr("class", "axis")
+				.attr("transform", `translate(0,${innerHeight})`)
+				.call(d3.axisBottom(xBase).ticks(10).tickFormat(d3.format("d")));
+
+			const yAxis = g.append("g")
+				.attr("class", "axis")
+				.call(d3.axisLeft(y));
+
+			g.append("text")
+				.attr("x", innerWidth / 2)
+				.attr("y", innerHeight + 50)
+				.attr("text-anchor", "middle")
+				.attr("fill", "#cbd5e0")
+				.text("Digit index in π");
+
+			g.append("text")
+				.attr("transform", `rotate(-90)`)
+				.attr("x", -innerHeight / 2)
+				.attr("y", -48)
+				.attr("text-anchor", "middle")
+				.attr("fill", "#cbd5e0")
+				.text("Cumulative value (alternating + and - by digit position)");
+
+			const overlay = g.append("rect")
+				.attr("width", innerWidth)
+				.attr("height", innerHeight)
+				.attr("fill", "transparent")
+				.style("cursor", "crosshair");
+
+			let currentX = xBase;
+
+			function renderWithXScale(xScale) {
+				currentX = xScale;
+				areaPositive.x(d => xScale(d.index));
+				areaNegative.x(d => xScale(d.index));
+				line.x(d => xScale(d.index));
+
+				positivePath.attr("d", areaPositive);
+				negativePath.attr("d", areaNegative);
+				linePath.attr("d", line);
+				xAxis.call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format("d")));
+				grid.call(d3.axisLeft(y).ticks(8).tickSize(-innerWidth).tickFormat(""));
+				baseline.attr("y1", y(0)).attr("y2", y(0));
+				yAxis.call(d3.axisLeft(y));
+			}
+
+			overlay
+				.on("mousemove", null)
+				.on("mouseenter", null)
+				.on("mouseleave", null);
+		const zoom = d3.zoom()
+			.scaleExtent([1, 40])				.translateExtent([[0, 0], [innerWidth, innerHeight]])
+				.extent([[0, 0], [innerWidth, innerHeight]])
+				.on("zoom", (event) => {
+					const k = event.transform.k;
+					const span = maxIndex - minIndex;
+					const visibleMax = minIndex + span / k;
+					const xZoomed = d3.scaleLinear()
+						.domain([minIndex, visibleMax])
+						.range([0, innerWidth]);
+					renderWithXScale(xZoomed);
+				});
+
+			overlay.call(zoom).call(zoom.transform, d3.zoomIdentity);
+	}
+
+	function parseDigitCount() {
+		const input = document.getElementById("digitsInput");
+		const parsed = Number.parseInt(input.value, 10);
+		if (Number.isNaN(parsed)) return 1000;
+		return Math.max(2, Math.min(10000, parsed));
+	}
+
+	function parseStartIndex() {
+		const input = document.getElementById("startInput");
+		const parsed = Number.parseInt(input.value, 10);
+		if (Number.isNaN(parsed)) return 0;
+		return Math.max(0, Math.min(50000, parsed));
+	}
+
+	function renderFromInput() {
+		const digitsCount = parseDigitCount();
+		const startIndex = parseStartIndex();
+		document.getElementById("digitsInput").value = String(digitsCount);
+		document.getElementById("startInput").value = String(startIndex);
+		const totalNeeded = startIndex + digitsCount;
+		const piDigits = computePiDigits(totalNeeded);
+		const data = buildSeries(piDigits, startIndex, digitsCount);
+		drawDifferenceChart(data);
+	}
+
+	document.getElementById("drawBtn").addEventListener("click", renderFromInput);
+	document.getElementById("digitsInput").addEventListener("keydown", (event) => {
+		if (event.key === "Enter") {
+			renderFromInput();
+		}
+	});
+
+	document.getElementById("startInput").addEventListener("keydown", (event) => {
+		if (event.key === "Enter") {
+			renderFromInput();
+		}
+	});
+
+	document.querySelectorAll(".preset-button").forEach((button) => {
+		button.addEventListener("click", () => {
+			const digits = button.dataset.digits;
+			const start = button.dataset.start;
+			document.getElementById("digitsInput").value = digits;
+			document.getElementById("startInput").value = start;
+			renderFromInput();
+		});
+	});
+
+	const creditsBtn = document.getElementById("creditsBtn");
+	const creditsModal = document.getElementById("creditsModal");
+	const creditsCloseBtn = document.getElementById("creditsCloseBtn");
+
+	function openCreditsModal() {
+		creditsModal.classList.add("open");
+		creditsModal.setAttribute("aria-hidden", "false");
+	}
+
+	function closeCreditsModal() {
+		creditsModal.classList.remove("open");
+		creditsModal.setAttribute("aria-hidden", "true");
+	}
+
+	creditsBtn.addEventListener("click", openCreditsModal);
+	creditsCloseBtn.addEventListener("click", closeCreditsModal);
+	creditsModal.addEventListener("click", (event) => {
+		if (event.target === creditsModal) {
+			closeCreditsModal();
+		}
+	});
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape" && creditsModal.classList.contains("open")) {
+			closeCreditsModal();
+		}
+	});
+
+	renderFromInput();
+	</script>
+</body>
+</html>
